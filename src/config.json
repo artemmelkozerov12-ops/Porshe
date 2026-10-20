@@ -1,0 +1,13 @@
+{
+  "author": "DRIPWORKER",
+  "role": "MOTION DESIGN · AUTOMOTIVE",
+  "model": "911 TURBO S",
+  "credit": "",
+  "specs": [
+    { "v": 3.7, "d": 1, "unit": "L",    "label": "TWIN-TURBO FLAT-SIX" },
+    { "v": 650, "d": 0, "unit": "PS",   "label": "MAX POWER" },
+    { "v": 800, "d": 0, "unit": "NM",   "label": "MAX TORQUE" },
+    { "v": 2.7, "d": 1, "unit": "S",    "label": "0–100 KM/H" },
+    { "v": 330, "d": 0, "unit": "KM/H", "label": "TOP SPEED" }
+  ]
+}
