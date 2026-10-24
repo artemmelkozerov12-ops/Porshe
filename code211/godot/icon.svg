@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="0" fill="#0a0f17"/>
+  <rect x="0" y="0" width="512" height="120" fill="#ff3d4a"/>
+  <rect x="512" y="0" width="512" height="120" fill="#2e7dff"/>
+  <g transform="rotate(-8 512 820)">
+    <rect x="-60" y="760" width="1144" height="110" fill="#ffb21e"/>
+    <g fill="#0a0f17">
+      <polygon points="0,760 70,760 -10,870 -80,870"/>
+      <polygon points="160,760 230,760 150,870 80,870"/>
+      <polygon points="320,760 390,760 310,870 240,870"/>
+      <polygon points="480,760 550,760 470,870 400,870"/>
+      <polygon points="640,760 710,760 630,870 560,870"/>
+      <polygon points="800,760 870,760 790,870 720,870"/>
+      <polygon points="960,760 1030,760 950,870 880,870"/>
+    </g>
+  </g>
+  <text x="512" y="560" font-family="Helvetica, Arial, sans-serif" font-weight="900" font-size="360" text-anchor="middle" fill="#e9eef5">211</text>
+  <text x="512" y="250" font-family="Helvetica, Arial, sans-serif" font-weight="800" font-size="110" text-anchor="middle" fill="#8796a8" letter-spacing="20">КОД</text>
+</svg>
