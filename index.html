@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<!-- viewport: запрет масштабирования + поддержка «чёлки» (viewport-fit=cover) -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<title>Захват Территории</title>
+<style>
+/* =====================================================================
+   1. ТЕМЫ (CSS-переменные). Цвета канваса дублируются в JS (THEMES).
+   ===================================================================== */
+:root, body.theme-cyber {
+  --bg: #07060d;
+  --menu-bg: radial-gradient(120% 60% at 0% 0%, rgba(255,43,214,.35), transparent 60%),
+             radial-gradient(120% 60% at 100% 100%, rgba(0,240,255,.30), transparent 60%), #07060d;
+  --panel: rgba(16,10,32,.88);
+  --border: rgba(0,240,255,.55);
+  --border-w: 1px;
+  --text: #eaf6ff;
+  --muted: #8f93c2;
+  --accent: #00f0ff;
+  --accent2: #ff2bd6;
+  --on-accent: #04121a;
+  --danger: #ff3b6b;
+  --p1: #ff2bd6;
+  --p2: #00f0ff;
+  --p1-text: #ffffff;
+  --p2-text: #ffffff;
+  --hud-bg-1: rgba(0,0,0,.35);
+  --hud-bg-2: rgba(0,0,0,.35);
+  --overlay: rgba(7,6,13,.82);
+  --font: "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --btn-shadow: 0 0 18px rgba(0,240,255,.55), inset 0 0 8px rgba(255,255,255,.35);
+  --panel-shadow: 0 0 40px rgba(255,43,214,.25), 0 0 2px rgba(0,240,255,.8);
+  --title-shadow: 0 0 10px rgba(255,43,214,.9), 0 0 26px rgba(0,240,255,.6);
+  --cd-shadow: 0 0 18px rgba(255,255,255,.8), 0 0 40px var(--accent);
+  --chip-active-shadow: 0 0 14px rgba(0,240,255,.6);
+}
+body.theme-minimal {
+  --bg: #17171a;
+  --menu-bg: #17171a;
+  --panel: #222226;
+  --border: #3a3a41;
+  --border-w: 1px;
+  --text: #f2f2f4;
+  --muted: #9a9aa3;
+  --accent: #ffffff;
+  --accent2: #ff5b3a;
+  --on-accent: #141416;
+  --danger: #ff5b3a;
+  --p1: #e9e9ec;
+  --p2: #45454d;
+  --p1-text: #151517;
+  --p2-text: #f4f4f6;
+  --hud-bg-1: rgba(0,0,0,.07);
+  --hud-bg-2: rgba(255,255,255,.07);
+  --overlay: rgba(23,23,26,.9);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --btn-shadow: none;
+  --panel-shadow: 0 10px 40px rgba(0,0,0,.45);
+  --title-shadow: none;
+  --cd-shadow: 0 4px 24px rgba(0,0,0,.25);
+  --chip-active-shadow: none;
+}
+body.theme-retro {
+  --bg: #1d2b53;
+  --menu-bg: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 2px, transparent 2px 4px), #1d2b53;
+  --panel: #000000;
+  --border: #fff1e8;
+  --border-w: 3px;
+  --text: #fff1e8;
+  --muted: #c2c3c7;
+  --accent: #ffec27;
+  --accent2: #ff004d;
+  --on-accent: #000000;
+  --danger: #ff004d;
+  --p1: #ff004d;
+  --p2: #29adff;
+  --p1-text: #fff1e8;
+  --p2-text: #fff1e8;
+  --hud-bg-1: rgba(0,0,0,.45);
+  --hud-bg-2: rgba(0,0,0,.45);
+  --overlay: rgba(0,0,0,.78);
+  --font: "Courier New", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 0px;
+  --radius-sm: 0px;
+  --btn-shadow: 4px 4px 0 #000;
+  --panel-shadow: 8px 8px 0 #000;
+  --title-shadow: 4px 4px 0 #ff004d, 8px 8px 0 #000;
+  --cd-shadow: 6px 6px 0 #000;
+  --chip-active-shadow: 3px 3px 0 #000;
+}
+
+/* =====================================================================
+   2. БАЗА + MOBILE HARDENING
+   - нет выделения, нет callout-меню, нет подсветки тапа
+   - body зафиксирован: нечему скроллиться, нет overscroll-bounce
+   - touch-action:none стоит на игровом слое (а не на body), иначе
+     ломается скролл модалки правил
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;          /* без double-tap zoom */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+#app { position: fixed; inset: 0; overflow: hidden; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#board { z-index: 0; }
+#confetti { z-index: 50; pointer-events: none; }
+.hidden { display: none !important; }
+button { font: inherit; color: inherit; }
+
+/* =====================================================================
+   3. ИГРОВОЙ СЛОЙ + HUD
+   ===================================================================== */
+#game {
+  position: absolute; inset: 0; z-index: 2;
+  touch-action: none;                  /* ключевое: никаких жестов браузера */
+}
+.hud {
+  position: absolute; left: 0; right: 0; height: 50%;
+  pointer-events: none;                /* все касания идут в #game */
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  padding: 0 16px calc(12px + env(safe-area-inset-bottom));
+}
+.hud-p2 { bottom: 0; color: var(--p2-text); --hud-bg: var(--hud-bg-2); }
+/* Игрок 1 сидит напротив: весь его HUD повёрнут на 180° */
+.hud-p1 {
+  top: 0; transform: rotate(180deg); color: var(--p1-text); --hud-bg: var(--hud-bg-1);
+  padding-bottom: calc(12px + env(safe-area-inset-top)); /* после поворота это верх экрана */
+}
+.hud-stats { display: flex; gap: 8px; width: 100%; max-width: 440px; }
+.stat {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 4px; border-radius: var(--radius-sm); background: var(--hud-bg);
+}
+.stat b { font-size: clamp(18px, 6vw, 28px); line-height: 1.1; font-variant-numeric: tabular-nums; font-weight: 900; }
+.stat small { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; opacity: .75; white-space: nowrap; }
+.stat.timer b { font-size: clamp(22px, 8vw, 36px); }
+.stat.timer.urgent b { color: var(--danger); animation: urgent .45s ease-in-out infinite alternate; }
+.hud-label { margin-top: 6px; font-size: 12px; font-weight: 900; letter-spacing: .32em; opacity: .85; }
+.hud-combo {
+  position: absolute; left: 0; right: 0; top: 30%;
+  text-align: center; opacity: 0; transform: scale(.8);
+  transition: opacity .15s, transform .15s;
+}
+.hud-combo.on { opacity: 1; transform: scale(1); }
+.hud-combo .cm { display: block; font-size: clamp(30px, 11vw, 58px); font-weight: 900; line-height: 1; text-shadow: var(--cd-shadow); }
+.hud-combo .cc { display: block; margin-top: 4px; font-size: 13px; font-weight: 800; letter-spacing: .2em; opacity: .9; }
+.hud-combo.t2 .cm { color: var(--accent); }
+.hud-combo.t3 .cm, .hud-combo.t4 .cm { color: var(--accent2); }
+.hud-combo.bump .cm { animation: bump .32s ease-out; }
+
+/* =====================================================================
+   4. ОТСЧЁТ / ВСПЫШКА (по половине на игрока)
+   ===================================================================== */
+.cd-wrap { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.cd { position: absolute; left: 0; right: 0; height: 50%; display: flex; align-items: center; justify-content: center; }
+.cd-p1 { top: 0; transform: rotate(180deg); color: var(--p1-text); }
+.cd-p2 { bottom: 0; color: var(--p2-text); }
+.cd-num {
+  font-size: clamp(64px, 26vw, 150px); font-weight: 900; line-height: 1;
+  text-shadow: var(--cd-shadow); animation: cdPop .7s ease-out both;
+}
+.cd-num.go { font-size: clamp(40px, 14vw, 88px); color: var(--accent); }
+.cd-num.flash { font-size: clamp(42px, 14vw, 92px); color: var(--accent); animation: flashIn .9s ease-out both; }
+body.theme-minimal .cd-num.go, body.theme-minimal .cd-num.flash { color: var(--accent2); }
+
+/* =====================================================================
+   5. МЕНЮ / МОДАЛКИ / КНОПКИ
+   ===================================================================== */
+.screen {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+}
+#menu { background: var(--menu-bg); }
+.card {
+  width: 100%; max-width: 420px; max-height: 100%;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  touch-action: pan-y;
+  background: var(--panel); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--panel-shadow);
+  padding: 24px 20px; display: flex; flex-direction: column; gap: 18px;
+}
+.title { text-align: center; line-height: .95; font-weight: 900; text-transform: uppercase; text-shadow: var(--title-shadow); }
+.title span { display: block; }
+.title .t1 { font-size: clamp(34px, 11vw, 50px); color: var(--p1); }
+.title .t2 { font-size: clamp(24px, 7.6vw, 34px); color: var(--p2); letter-spacing: .04em; }
+body.theme-minimal .title .t1 { color: var(--text); }
+body.theme-minimal .title .t2 { color: var(--muted); }
+.subtitle { text-align: center; color: var(--muted); font-size: 14px; margin-top: -6px; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group-label { font-size: 11px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.chip {
+  appearance: none; cursor: pointer; touch-action: manipulation;
+  border: var(--border-w) solid var(--border); background: transparent; color: var(--text);
+  border-radius: var(--radius-sm); padding: 12px 4px; font-size: 14px; font-weight: 800;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: transform .08s, background .15s;
+}
+.chip:active { transform: scale(.95); }
+.chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: var(--chip-active-shadow); }
+.sw { width: 34px; height: 14px; border-radius: 3px; display: block; border: 1px solid rgba(255,255,255,.3); }
+.sw-cyber { background: linear-gradient(90deg, #ff2bd6 50%, #00f0ff 50%); box-shadow: 0 0 8px #ff2bd6; }
+.sw-minimal { background: linear-gradient(90deg, #e9e9ec 50%, #45454d 50%); }
+.sw-retro { background: linear-gradient(90deg, #ff004d 50%, #29adff 50%); border-radius: 0; border: 2px solid #000; }
+.hint { font-size: 13px; color: var(--muted); min-height: 2.6em; line-height: 1.3; }
+.btn {
+  appearance: none; cursor: pointer; touch-action: manipulation;
+  border: var(--border-w) solid var(--border); background: transparent; color: var(--text);
+  border-radius: var(--radius); padding: 15px 18px;
+  font-size: 18px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  transition: transform .08s, opacity .2s;
+}
+.btn:active { transform: scale(.96); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: var(--btn-shadow); }
+.btn.ghost { color: var(--muted); }
+.modal { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
+.rules h2 { font-size: 22px; font-weight: 900; text-transform: uppercase; color: var(--accent); }
+body.theme-minimal .rules h2 { color: var(--text); }
+.rules h3 { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.rules p, .rules li { font-size: 15px; line-height: 1.45; }
+.rules ul { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.rules b { color: var(--accent); }
+body.theme-minimal .rules b { color: var(--accent2); }
+
+/* =====================================================================
+   6. РЕЗУЛЬТАТЫ (половина на игрока, верхняя повёрнута)
+   ===================================================================== */
+#results { z-index: 10; padding: 0; flex-direction: column; align-items: stretch; justify-content: stretch; background: var(--overlay); }
+.res-half {
+  position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.res-p1 { --pc: var(--p1); transform: rotate(180deg); padding-bottom: calc(12px + env(safe-area-inset-top)); }
+.res-p2 { --pc: var(--p2); }
+.res-half::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--pc); opacity: .16; }
+.res-half.win::before { opacity: .3; }
+.banner { text-align: center; }
+.verdict { font-size: clamp(30px, min(11vw, 6.5vh), 56px); font-weight: 900; line-height: 1; text-transform: uppercase; animation: bannerIn .8s cubic-bezier(.2,1.4,.4,1) both; }
+.win .verdict { color: var(--accent); text-shadow: var(--title-shadow); }
+body.theme-minimal .win .verdict { color: var(--text); }
+.lose .verdict { color: var(--muted); }
+.draw .verdict { color: var(--text); }
+.reason { margin-top: 6px; font-size: clamp(11px, 3.4vw, 14px); color: var(--muted); letter-spacing: .06em; }
+.stats { width: 100%; max-width: 380px; border-collapse: collapse; font-size: clamp(11px, min(3.8vw, 2.2vh), 16px); }
+.stats th, .stats td { padding: .32em .5em; text-align: right; font-variant-numeric: tabular-nums; }
+.stats th { font-size: .78em; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.stats td:first-child, .stats th:first-child { text-align: left; color: var(--muted); }
+.stats td.me { font-weight: 900; color: var(--text); }
+.stats tr + tr td { border-top: 1px solid rgba(128,128,128,.25); }
+.stats td.best::after { content: " ★"; color: var(--accent); }
+body.theme-minimal .stats td.best::after { color: var(--accent2); }
+.res-mid {
+  flex: none; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  padding: 10px 16px; background: var(--panel);
+  border-top: var(--border-w) solid var(--border); border-bottom: var(--border-w) solid var(--border);
+}
+.res-margin { font-size: 13px; color: var(--muted); text-align: center; }
+.res-btns { display: flex; gap: 10px; width: 100%; max-width: 420px; }
+.res-btns .btn { flex: 1; padding: 12px; font-size: 16px; }
+/* защита от случайного «реванша» пальцем, который ещё долбит по экрану */
+#results.locked .res-btns { opacity: .35; pointer-events: none; }
+/* на экране результатов HUD не нужен — иначе просвечивает */
+#game.ended .hud { visibility: hidden; }
+
+/* =====================================================================
+   7. ПОДСКАЗКА ПОВОРОТА
+   ===================================================================== */
+#rotate { display: none; position: fixed; inset: 0; z-index: 100; background: var(--bg); color: var(--text); align-items: center; justify-content: center; text-align: center; padding: 24px; font-size: 18px; font-weight: 800; }
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) { #rotate { display: flex; } }
+
+/* =====================================================================
+   8. АНИМАЦИИ (только transform/opacity — дёшево для GPU)
+   ===================================================================== */
+@keyframes cdPop { 0% { transform: scale(2.2); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(.9); opacity: .9; } }
+@keyframes flashIn { 0% { transform: scale(.3) rotate(-10deg); opacity: 0; } 50% { transform: scale(1.15) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes bannerIn { 0% { transform: scale(.2) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes bump { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+@keyframes urgent { from { transform: scale(1); } to { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .cd-num, .verdict, .hud-combo.bump .cm, .stat.timer.urgent b { animation-duration: .01s !important; } }
+</style>
+</head>
+<body class="theme-cyber">
+<div id="app">
+  <!-- Канвас поля: территории, граница, рябь, частицы -->
+  <canvas id="board"></canvas>
+
+  <!-- Игровой слой: единственная зона ввода -->
+  <div id="game" aria-label="Игровое поле">
+    <div class="hud hud-p1" id="hud1">
+      <div class="hud-combo" id="combo1"><b class="cm">x1</b><span class="cc">0 КОМБО</span></div>
+      <div class="hud-stats">
+        <div class="stat"><b id="taps1">0</b><small>тапов</small></div>
+        <div class="stat timer" id="timerBox1"><b id="time1">0.0</b><small id="timeLbl1">сек</small></div>
+        <div class="stat"><b id="terr1">50%</b><small>зона</small></div>
+      </div>
+      <div class="hud-label">ИГРОК 1</div>
+    </div>
+    <div class="hud hud-p2" id="hud2">
+      <div class="hud-combo" id="combo2"><b class="cm">x1</b><span class="cc">0 КОМБО</span></div>
+      <div class="hud-stats">
+        <div class="stat"><b id="taps2">0</b><small>тапов</small></div>
+        <div class="stat timer" id="timerBox2"><b id="time2">0.0</b><small id="timeLbl2">сек</small></div>
+        <div class="stat"><b id="terr2">50%</b><small>зона</small></div>
+      </div>
+      <div class="hud-label">ИГРОК 2</div>
+    </div>
+  </div>
+
+  <!-- Отсчёт и вспышки «НОКАУТ!/ВРЕМЯ!» -->
+  <div class="cd-wrap hidden" id="cd">
+    <div class="cd cd-p1" id="cd1"></div>
+    <div class="cd cd-p2" id="cd2"></div>
+  </div>
+
+  <!-- Результаты -->
+  <section class="screen hidden" id="results">
+    <div class="res-half res-p1" id="res1"></div>
+    <div class="res-mid">
+      <div class="res-margin" id="resMargin"></div>
+      <div class="res-btns">
+        <button class="btn primary" id="btnRematch" type="button">Реванш</button>
+        <button class="btn ghost" id="btnMenu" type="button">Меню</button>
+      </div>
+    </div>
+    <div class="res-half res-p2" id="res2"></div>
+  </section>
+
+  <!-- Главное меню -->
+  <section class="screen" id="menu">
+    <div class="card scrollable">
+      <h1 class="title"><span class="t1">Захват</span><span class="t2">Территории</span></h1>
+      <p class="subtitle">Дуэль быстрых тапов на одном экране</p>
+
+      <div class="group">
+        <div class="group-label">Режим</div>
+        <div class="seg" id="modeSeg">
+          <button class="chip" type="button" data-mode="10">10 с</button>
+          <button class="chip" type="button" data-mode="20">20 с</button>
+          <button class="chip" type="button" data-mode="30">30 с</button>
+          <button class="chip" type="button" data-mode="dist">Дист.</button>
+        </div>
+        <p class="hint" id="modeHint"></p>
+      </div>
+
+      <div class="group">
+        <div class="group-label">Тема</div>
+        <div class="themes" id="themeSeg">
+          <button class="chip" type="button" data-theme="cyber"><i class="sw sw-cyber"></i>Неон</button>
+          <button class="chip" type="button" data-theme="minimal"><i class="sw sw-minimal"></i>Минимал</button>
+          <button class="chip" type="button" data-theme="retro"><i class="sw sw-retro"></i>Ретро</button>
+        </div>
+      </div>
+
+      <button class="btn primary" id="btnStart" type="button">Играть</button>
+      <button class="btn ghost" id="btnRules" type="button">Как играть</button>
+    </div>
+  </section>
+
+  <!-- Правила -->
+  <div class="modal hidden" id="rules">
+    <div class="card rules scrollable">
+      <h2>Как играть</h2>
+      <div>
+        <h3>Посадка</h3>
+        <p>Положите телефон на стол между собой. <b>Игрок 1</b> — сверху (его интерфейс перевёрнут к нему), <b>Игрок 2</b> — снизу.</p>
+      </div>
+      <div>
+        <h3>Цель</h3>
+        <ul>
+          <li>Тапайте по <b>своей половине экрана</b> — каждый тап толкает границу к сопернику.</li>
+          <li>Дотолкали границу до края соперника — <b>нокаут</b>, мгновенная победа.</li>
+          <li><b>10/20/30 с:</b> по истечении времени побеждает тот, у кого больше территории.</li>
+          <li><b>Дистанция:</b> таймера нет — играем до нокаута (страховочный лимит 90 с, затем решает территория).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Комбо</h3>
+        <ul>
+          <li>Тапайте ритмично: пауза между тапами ≤ 0,26 с держит комбо.</li>
+          <li>6 → <b>x1.25</b>, 15 → <b>x1.5</b>, 30 → <b>x1.75</b>, 50 → <b>x2</b> силы толчка.</li>
+          <li>Сбился с ритма — множитель обнуляется.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Важно</h3>
+        <ul>
+          <li>Можно тапать несколькими пальцами. iOS отслеживает максимум 5 касаний на весь экран — на двоих.</li>
+          <li>Тапы во время отсчёта не засчитываются. Фальстарт ничего не даёт.</li>
+          <li>Ничья по территории решается количеством тапов.</li>
+        </ul>
+      </div>
+      <button class="btn primary" id="btnRulesClose" type="button">Понятно</button>
+    </div>
+  </div>
+
+  <!-- Конфетти поверх всего, не перехватывает касания -->
+  <canvas id="confetti"></canvas>
+
+  <div id="rotate">Поверните телефон вертикально 📱</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   КОНФИГ
+   ===================================================================== */
+const CFG = {
+  COMBO_WINDOW: 260,        // мс: макс. пауза между тапами, чтобы комбо не сбросилось
+  STEP_TIME: 0.0065,        // сдвиг границы за тап (доля экрана) в режиме на время
+  STEP_DIST: 0.009,         // сдвиг в режиме «Дистанция» (там нужен нокаут)
+  DIST_CAP: 90,             // с: страховочный лимит режима «Дистанция»
+  MAX_PARTICLES: 360,
+  MAX_RIPPLES: 64,
+  MAX_CONFETTI: 260,
+  CD_STEP: 750,             // мс на цифру отсчёта
+  END_DELAY: 1100,          // пауза между «НОКАУТ!» и экраном результатов
+  RESULT_LOCK: 900,         // кнопки результатов заблокированы (защита от случайного тапа)
+  COMBO_TIERS: [[50, 2], [30, 1.75], [15, 1.5], [6, 1.25]],
+};
+
+const MODES = {
+  '10':   { type: 'time', limit: 10, hint: 'Блиц: 10 секунд. Больше территории к финалу — победа.' },
+  '20':   { type: 'time', limit: 20, hint: 'Классика: 20 секунд. Больше территории к финалу — победа.' },
+  '30':   { type: 'time', limit: 30, hint: 'Марафон: 30 секунд. Проверка выносливости пальцев.' },
+  'dist': { type: 'dist', limit: CFG.DIST_CAP, hint: 'Дотолкай границу до края соперника. Без таймера (лимит 90 с).' },
+};
+
+/* Цвета для канваса (CSS-переменные канвасу недоступны дёшево) */
+const THEMES = {
+  cyber: {
+    p1Deep: '#2a0526', p1Near: '#a3108f', p2Deep: '#02242b', p2Near: '#038a99',
+    p1: '#ff2bd6', p2: '#00f0ff', p1Fx: '#ffb3f1', p2Fx: '#b3fbff',
+    bar: '#ffffff', mid: 'rgba(255,255,255,0.28)', glow: true, additive: true, pixel: false,
+    overlay: 'grid', confetti: ['#ff2bd6', '#00f0ff', '#fffb00', '#ffffff', '#7d5cff'],
+  },
+  minimal: {
+    p1Deep: '#c9c9cf', p1Near: '#f3f3f5', p2Deep: '#1f1f23', p2Near: '#45454d',
+    p1: '#ffffff', p2: '#8d8d96', p1Fx: '#5a5a63', p2Fx: '#ffffff',
+    bar: '#ff5b3a', mid: 'rgba(128,128,128,0.5)', glow: false, additive: false, pixel: false,
+    overlay: null, confetti: ['#ffffff', '#bdbdc4', '#ff5b3a', '#6d6d75'],
+  },
+  retro: {
+    p1Deep: '#7e2553', p1Near: '#ff004d', p2Deep: '#1d2b53', p2Near: '#29adff',
+    p1: '#ff004d', p2: '#29adff', p1Fx: '#ffec27', p2Fx: '#fff1e8',
+    bar: '#ffec27', mid: 'rgba(255,241,232,0.55)', glow: false, additive: false, pixel: true,
+    overlay: 'scan', confetti: ['#ff004d', '#29adff', '#ffec27', '#00e436', '#fff1e8', '#ff77a8'],
+  },
+};
+
+/* =====================================================================
+   DOM
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const app = $('app'), game = $('game');
+const board = $('board'), bctx = board.getContext('2d', { alpha: false });
+const confCanvas = $('confetti'), cctx = confCanvas.getContext('2d');
+const UI = {
+  menu: $('menu'), rules: $('rules'), results: $('results'), cd: $('cd'),
+  cd1: $('cd1'), cd2: $('cd2'), res1: $('res1'), res2: $('res2'), resMargin: $('resMargin'),
+  modeSeg: $('modeSeg'), themeSeg: $('themeSeg'), modeHint: $('modeHint'),
+  taps: [null, $('taps1'), $('taps2')],
+  time: [null, $('time1'), $('time2')],
+  timeLbl: [null, $('timeLbl1'), $('timeLbl2')],
+  timerBox: [null, $('timerBox1'), $('timerBox2')],
+  terr: [null, $('terr1'), $('terr2')],
+  combo: [null, $('combo1'), $('combo2')],
+};
+UI.comboMult = [null, UI.combo[1].querySelector('.cm'), UI.combo[2].querySelector('.cm')];
+UI.comboCnt  = [null, UI.combo[1].querySelector('.cc'), UI.combo[2].querySelector('.cc')];
+
+/* =====================================================================
+   НАСТРОЙКИ (localStorage в try/catch — приватный режим Safari бросает)
+   ===================================================================== */
+const settings = { mode: '20', theme: 'cyber' };
+try {
+  const s = JSON.parse(localStorage.getItem('tc_settings') || '{}');
+  if (s && MODES[s.mode]) settings.mode = s.mode;
+  if (s && THEMES[s.theme]) settings.theme = s.theme;
+} catch (e) { /* без сохранения — не критично */ }
+function saveSettings() { try { localStorage.setItem('tc_settings', JSON.stringify(settings)); } catch (e) {} }
+
+let THEME = THEMES[settings.theme];
+
+/* =====================================================================
+   СОСТОЯНИЕ ИГРЫ
+   p — доля экрана Игрока 2 (0..1). 0.5 — центр.
+   Граница на экране: y = (1 - p) * высота.
+   ===================================================================== */
+const mkPlayer = () => ({ taps: 0, combo: 0, peak: 0, last: -1e9, tier: 0 });
+const G = {
+  state: 'menu',            // menu | countdown | playing | over
+  mode: MODES[settings.mode],
+  p: 0.5, shown: 0.5,       // логическая и отрисованная (сглаженная) позиция
+  elapsed: 0,               // чистое игровое время, с
+  pl: [null, mkPlayer(), mkPlayer()],
+  winner: 0, reason: '',
+  rafId: 0, lastFrame: 0,
+  session: 0,               // инкремент «убивает» все отложенные колбэки прошлого матча
+  timeouts: [],
+};
+const ripples = [], parts = [], confetti = [];
+let hudCache = Object.create(null);
+let confettiDirty = false;
+
+/* Таймеры, привязанные к сессии: после рестарта старые колбэки не сработают */
+function later(fn, ms) {
+  const s = G.session;
+  const id = setTimeout(() => { if (s === G.session) fn(); }, ms);
+  G.timeouts.push(id);
+}
+function clearTimers() { G.timeouts.forEach(clearTimeout); G.timeouts.length = 0; }
+
+/* =====================================================================
+   РАЗМЕРЫ / DPR
+   ===================================================================== */
+let VW = 1, VH = 1, DPR = 1, rectTop = 0, rectLeft = 0;
+let overlayCanvas = null;
+function resize() {
+  VW = Math.max(1, app.clientWidth);
+  VH = Math.max(1, app.clientHeight);
+  DPR = Math.min(window.devicePixelRatio || 1, 2);  // >2 не даёт видимой разницы, но жрёт fill-rate
+  for (const c of [board, confCanvas]) {
+    c.width = Math.round(VW * DPR);
+    c.height = Math.round(VH * DPR);
+  }
+  const r = game.getBoundingClientRect();
+  rectTop = r.top; rectLeft = r.left;
+  buildOverlay();
+  if (G.state !== 'menu') draw();
+}
+
+/* Статичный оверлей (сетка/сканлайны) рисуется один раз и блитится — дешевле, чем сотни линий в кадр */
+function buildOverlay() {
+  overlayCanvas = null;
+  if (!THEME.overlay) return;
+  const oc = document.createElement('canvas');
+  oc.width = Math.round(VW * DPR); oc.height = Math.round(VH * DPR);
+  const o = oc.getContext('2d');
+  o.setTransform(DPR, 0, 0, DPR, 0, 0);
+  o.beginPath();
+  if (THEME.overlay === 'grid') {
+    o.strokeStyle = 'rgba(255,255,255,0.07)'; o.lineWidth = 1;
+    for (let x = (VW % 36) / 2; x < VW; x += 36) { o.moveTo(x + .5, 0); o.lineTo(x + .5, VH); }
+    for (let y = (VH % 36) / 2; y < VH; y += 36) { o.moveTo(0, y + .5); o.lineTo(VW, y + .5); }
+    o.stroke();
+    const v = o.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * .3, VW / 2, VH / 2, Math.max(VW, VH) * .75);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    o.fillStyle = v; o.fillRect(0, 0, VW, VH);
+  } else if (THEME.overlay === 'scan') {
+    o.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let y = 0; y < VH; y += 4) o.fillRect(0, y, VW, 2);
+  }
+  overlayCanvas = oc;
+}
+
+/* =====================================================================
+   ВВОД (критично для мультитача)
+   - На тач-устройствах: touchstart + перебор changedTouches.
+     Каждый новый палец обрабатывается отдельно, касания игроков
+     друг друга не блокируют (у нас нет «захвата» указателя/жестов).
+   - pointerdown используется только для мыши/стилуса (десктоп-тесты),
+     touch-пойнтеры игнорируются, чтобы не было двойного счёта.
+   - preventDefault на touchstart/move/end убивает зум, скролл,
+     эмулированные click/mouse-события и лупу iOS.
+   ===================================================================== */
+const HAS_TOUCH = 'ontouchstart' in window;
+
+function handlePoint(cx, cy) {
+  if (G.state !== 'playing') return;           // отсчёт/финал — ввод игнорируется
+  const x = cx - rectLeft, y = cy - rectTop;
+  const player = y < VH / 2 ? 1 : 2;           // зона ввода — фиксированная половина (честно и предсказуемо)
+  tap(player, x, y);
+}
+
+game.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const list = e.changedTouches;
+  for (let i = 0; i < list.length; i++) handlePoint(list[i].clientX, list[i].clientY);
+}, { passive: false });
+['touchmove', 'touchend', 'touchcancel'].forEach((t) =>
+  game.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+
+game.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' && HAS_TOUCH) return; // уже обработано touchstart
+  e.preventDefault();
+  handlePoint(e.clientX, e.clientY);
+});
+
+/* Глобальные предохранители */
+document.addEventListener('touchmove', (e) => {
+  // скролл разрешён только внутри .scrollable (меню/правила)
+  if (!(e.target instanceof Element) || !e.target.closest('.scrollable')) e.preventDefault();
+}, { passive: false });
+['gesturestart', 'gesturechange', 'gestureend'].forEach((t) =>   // pinch-zoom в iOS Safari
+  document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('selectstart', (e) => e.preventDefault());
+document.addEventListener('dragstart', (e) => e.preventDefault());
+
+/* =====================================================================
+   ИГРОВАЯ ЛОГИКА
+   ===================================================================== */
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function comboTier(c) {
+  for (let i = 0; i < CFG.COMBO_TIERS.length; i++) if (c >= CFG.COMBO_TIERS[i][0]) return CFG.COMBO_TIERS.length - i;
+  return 0;
+}
+function comboMult(c) {
+  for (const [need, m] of CFG.COMBO_TIERS) if (c >= need) return m;
+  return 1;
+}
+
+function tap(n, x, y) {
+  const P = G.pl[n];
+  const now = performance.now();
+  P.combo = (now - P.last <= CFG.COMBO_WINDOW) ? P.combo + 1 : 1;
+  P.last = now;
+  P.taps++;
+  if (P.combo > P.peak) P.peak = P.combo;
+
+  const m = comboMult(P.combo);
+  const step = (G.mode.type === 'dist' ? CFG.STEP_DIST : CFG.STEP_TIME) * m;
+  G.p = clamp(G.p + (n === 2 ? step : -step), 0, 1);
+
+  fxTap(n, x, y, m);
+
+  if (G.p >= 1) endGame(2, 'ko');
+  else if (G.p <= 0) endGame(1, 'ko');
+}
+
+function resetMatch() {
+  G.mode = MODES[settings.mode];
+  G.p = 0.5; G.shown = 0.5; G.elapsed = 0;
+  G.pl[1] = mkPlayer(); G.pl[2] = mkPlayer();
+  G.winner = 0; G.reason = '';
+  ripples.length = 0; parts.length = 0; confetti.length = 0;
+  confettiDirty = true;
+  hudCache = Object.create(null);
+  game.classList.remove('ended');
+  for (const n of [1, 2]) {
+    UI.combo[n].classList.remove('on', 'bump', 't1', 't2', 't3', 't4');
+    UI.timerBox[n].classList.remove('urgent');
+  }
+  updateHud();
+}
+
+function startMatch() {
+  G.session++;               // инвалидирует все отложенные колбэки прошлого матча
+  clearTimers();
+  resetMatch();
+  UI.menu.classList.add('hidden');
+  UI.rules.classList.add('hidden');
+  UI.results.classList.add('hidden');
+  resize();
+  startLoop();
+  runCountdown();
+}
+
+function runCountdown() {
+  G.state = 'countdown';
+  UI.cd.classList.remove('hidden');
+  const seq = ['3', '2', '1'];
+  seq.forEach((t, i) => later(() => setCd(t, ''), i * CFG.CD_STEP));
+  later(() => {
+    setCd('ВПЕРЁД!', 'go');
+    G.elapsed = 0;
+    G.state = 'playing';     // ввод открывается строго здесь
+  }, seq.length * CFG.CD_STEP);
+  later(() => UI.cd.classList.add('hidden'), seq.length * CFG.CD_STEP + 650);
+}
+
+/* Перезапуск CSS-анимации через замену узла (без принудительного reflow) */
+function setCd(text, cls) {
+  UI.cd.classList.remove('hidden');
+  for (const box of [UI.cd1, UI.cd2]) {
+    const s = document.createElement('span');
+    s.className = 'cd-num ' + cls;
+    s.textContent = text;
+    box.replaceChildren(s);
+  }
+}
+
+function endGame(winner, reason) {
+  if (G.state !== 'playing') return;           // защита от двойного завершения
+  G.state = 'over';
+  G.winner = winner; G.reason = reason;
+  setCd(reason === 'ko' ? 'НОКАУТ!' : 'ВРЕМЯ!', 'flash');
+  try { if (navigator.vibrate) navigator.vibrate([40, 60, 80]); } catch (e) {}
+  later(showResults, CFG.END_DELAY);
+}
+
+/* Решение по территории (таймер/лимит). Ничья по зоне → по тапам. */
+function decideByTerritory(reason) {
+  const t2 = Math.round(G.p * 1000), t1 = 1000 - t2;
+  let w = 0;
+  if (t1 !== t2) w = t1 > t2 ? 1 : 2;
+  else if (G.pl[1].taps !== G.pl[2].taps) w = G.pl[1].taps > G.pl[2].taps ? 1 : 2;
+  endGame(w, reason);
+}
+
+function goMenu() {
+  G.session++;
+  clearTimers();
+  G.state = 'menu';
+  stopLoop();
+  confetti.length = 0;
+  cctx.setTransform(1, 0, 0, 1, 0, 0);
+  cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  UI.cd.classList.add('hidden');
+  UI.results.classList.add('hidden');
+  UI.menu.classList.remove('hidden');
+}
+
+/* =====================================================================
+   ЦИКЛ (один requestAnimationFrame на всё приложение)
+   - dt ограничен 0.1 с: если вкладку свернули, rAF замирает,
+     и после возврата время не «прыгает» — фактически пауза.
+   - startLoop всегда отменяет предыдущий кадр → никогда не будет
+     двух параллельных циклов (нет «двойной скорости» на реванше).
+   ===================================================================== */
+function startLoop() {
+  stopLoop();
+  G.lastFrame = performance.now();
+  G.rafId = requestAnimationFrame(frame);
+}
+function stopLoop() {
+  if (G.rafId) cancelAnimationFrame(G.rafId);
+  G.rafId = 0;
+}
+
+function frame(now) {
+  G.rafId = requestAnimationFrame(frame);
+  let dt = (now - G.lastFrame) / 1000;
+  G.lastFrame = now;
+  if (!(dt > 0)) dt = 0;
+  if (dt > 0.1) dt = 0.1;
+
+  if (G.state === 'playing') {
+    G.elapsed += dt;
+    // сброс комбо при потере ритма
+    const t = performance.now();
+    for (const n of [1, 2]) {
+      const P = G.pl[n];
+      if (P.combo && t - P.last > CFG.COMBO_WINDOW) P.combo = 0;
+    }
+    if (G.elapsed >= G.mode.limit) decideByTerritory(G.mode.type === 'time' ? 'time' : 'cap');
+  }
+
+  // плавное следование отображаемой границы за логической (независимо от FPS)
+  G.shown += (G.p - G.shown) * (1 - Math.exp(-dt * 20));
+
+  updateFx(dt);
+  draw();
+  drawConfetti(dt);
+  updateHud();
+}
+
+/* =====================================================================
+   ЭФФЕКТЫ
+   ===================================================================== */
+function fxTap(n, x, y, m) {
+  const T = THEME;
+  const col = n === 1 ? T.p1Fx : T.p2Fx;
+  if (ripples.length < CFG.MAX_RIPPLES) ripples.push({ x, y, t: 0, col, big: m > 1 });
+
+  const cnt = 4 + Math.round(m * 2);
+  for (let i = 0; i < cnt && parts.length < CFG.MAX_PARTICLES; i++) {
+    const a = Math.random() * Math.PI * 2, s = rand(70, 200) * m;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: rand(.3, .6), size: rand(2, 4.5), col });
+  }
+  // искры на границе — летят в территорию соперника
+  const by = (1 - G.shown) * VH, dir = n === 2 ? -1 : 1;
+  for (let i = 0; i < 3 && parts.length < CFG.MAX_PARTICLES; i++) {
+    parts.push({ x: x + rand(-24, 24), y: by, vx: rand(-140, 140), vy: dir * rand(150, 380) * m,
+                 life: 0, max: rand(.25, .5), size: rand(1.5, 3.5), col: n === 1 ? T.p1 : T.p2 });
+  }
+}
+
+function updateFx(dt) {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    r.t += dt / 0.45;
+    if (r.t >= 1) { ripples[i] = ripples[ripples.length - 1]; ripples.pop(); }
+  }
+  const drag = Math.max(0, 1 - 4 * dt);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.life += dt;
+    if (p.life >= p.max) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }
+    p.vx *= drag; p.vy *= drag;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+}
+
+/* =====================================================================
+   ОТРИСОВКА ПОЛЯ
+   ===================================================================== */
+function draw() {
+  const T = THEME, ctx = bctx, w = VW, h = VH;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  const by = (1 - G.shown) * h;
+
+  // территории (градиент: от края к границе — ярче)
+  let g = ctx.createLinearGradient(0, 0, 0, Math.max(1, by));
+  g.addColorStop(0, T.p1Deep); g.addColorStop(1, T.p1Near);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, by);
+  g = ctx.createLinearGradient(0, by, 0, h);
+  g.addColorStop(0, T.p2Near); g.addColorStop(1, T.p2Deep);
+  ctx.fillStyle = g; ctx.fillRect(0, by, w, h - by);
+
+  if (overlayCanvas) ctx.drawImage(overlayCanvas, 0, 0, w, h);
+
+  // метка исходного центра
+  ctx.strokeStyle = T.mid; ctx.lineWidth = 2;
+  ctx.setLineDash([10, 10]);
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (T.additive) ctx.globalCompositeOperation = 'lighter';
+
+  // рябь
+  for (const r of ripples) {
+    const e = r.t, rad = 12 + (r.big ? 80 : 56) * e;
+    ctx.globalAlpha = 1 - e;
+    ctx.strokeStyle = r.col;
+    ctx.lineWidth = (r.big ? 5 : 3) * (1 - e) + 1;
+    if (T.pixel) {
+      const s = Math.round(rad / 4) * 4;
+      ctx.strokeRect(Math.round(r.x - s), Math.round(r.y - s), s * 2, s * 2);
+    } else {
+      ctx.beginPath(); ctx.arc(r.x, r.y, rad, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  // частицы
+  for (const p of parts) {
+    ctx.globalAlpha = 1 - p.life / p.max;
+    ctx.fillStyle = p.col;
+    if (T.pixel) {
+      const s = Math.ceil(p.size / 2) * 3;
+      ctx.fillRect(Math.round(p.x / 3) * 3, Math.round(p.y / 3) * 3, s, s);
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  // граница (tug-of-war)
+  const th = T.pixel ? 10 : 8;
+  if (T.glow) { ctx.shadowBlur = 24; ctx.shadowColor = T.bar; }
+  ctx.fillStyle = T.bar;
+  ctx.fillRect(0, by - th / 2, w, th);
+  ctx.shadowBlur = 0;
+  if (T.pixel) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, by - th / 2 - 3, w, 3); ctx.fillRect(0, by + th / 2, w, 3);
+  } else {
+    ctx.fillStyle = T.p1; ctx.fillRect(0, by - th / 2 - 3, w, 3);
+    ctx.fillStyle = T.p2; ctx.fillRect(0, by + th / 2, w, 3);
+  }
+  // «узел» каната по центру
+  ctx.fillStyle = T.bar;
+  if (T.pixel) {
+    ctx.fillRect(w / 2 - 14, by - 14, 28, 28);
+    ctx.fillStyle = '#000'; ctx.fillRect(w / 2 - 6, by - 6, 12, 12);
+  } else {
+    if (T.glow) { ctx.shadowBlur = 18; ctx.shadowColor = T.bar; }
+    ctx.beginPath(); ctx.arc(w / 2, by, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+/* =====================================================================
+   КОНФЕТТИ
+   ===================================================================== */
+function spawnConfetti(winner) {
+  const cols = THEME.confetti;
+  const cy = winner === 1 ? VH * 0.25 : winner === 2 ? VH * 0.75 : VH * 0.5;
+  for (let i = 0; i < 150 && confetti.length < CFG.MAX_CONFETTI; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(180, 620);
+    confetti.push({ x: VW / 2 + rand(-30, 30), y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 200,
+      rot: rand(0, 6.28), vr: rand(-9, 9), w: rand(6, 10), h: rand(10, 16), col: cols[i % cols.length],
+      life: 0, max: rand(2.6, 4.2), flip: rand(4, 10), seed: rand(0, 6.28) });
+  }
+  for (let i = 0; i < 70 && confetti.length < CFG.MAX_CONFETTI; i++) {
+    confetti.push({ x: rand(0, VW), y: rand(-VH * 0.4, -10), vx: rand(-40, 40), vy: rand(60, 200),
+      rot: rand(0, 6.28), vr: rand(-6, 6), w: rand(6, 9), h: rand(9, 14), col: cols[i % cols.length],
+      life: 0, max: rand(3.5, 5), flip: rand(4, 10), seed: rand(0, 6.28) });
+  }
+  confettiDirty = true;
+}
+
+function drawConfetti(dt) {
+  if (!confetti.length && !confettiDirty) return;
+  cctx.setTransform(1, 0, 0, 1, 0, 0);
+  cctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  confettiDirty = confetti.length > 0;
+  const drag = Math.max(0, 1 - 1.4 * dt);
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i];
+    c.life += dt;
+    if (c.life >= c.max || c.y > VH + 40) { confetti[i] = confetti[confetti.length - 1]; confetti.pop(); continue; }
+    c.vx *= drag; c.vy = c.vy * drag + 520 * dt;
+    c.x += (c.vx + Math.sin(c.life * 6 + c.seed) * 40) * dt;
+    c.y += c.vy * dt;
+    c.rot += c.vr * dt;
+    const cos = Math.cos(c.rot), sin = Math.sin(c.rot);
+    const fade = Math.min(1, (c.max - c.life) * 2);
+    cctx.globalAlpha = fade;
+    cctx.setTransform(DPR * cos, DPR * sin, -DPR * sin, DPR * cos, DPR * c.x, DPR * c.y);
+    cctx.fillStyle = c.col;
+    const hh = c.h * Math.abs(Math.cos(c.life * c.flip));   // «переворот» листочка
+    cctx.fillRect(-c.w / 2, -hh / 2, c.w, Math.max(1, hh));
+  }
+  cctx.globalAlpha = 1;
+}
+
+/* =====================================================================
+   HUD (DOM обновляется только при изменении значения)
+   ===================================================================== */
+function setText(el, key, val) {
+  if (hudCache[key] !== val) { hudCache[key] = val; el.textContent = val; }
+}
+function setFlag(el, key, cls, on) {
+  if (hudCache[key] !== on) { hudCache[key] = on; el.classList.toggle(cls, on); }
+}
+
+function updateHud() {
+  const t1 = Math.round((1 - G.p) * 100), t2 = 100 - t1;
+  const isTime = G.mode.type === 'time';
+  const left = Math.max(0, G.mode.limit - G.elapsed);
+  const timeStr = isTime ? left.toFixed(1) : G.elapsed.toFixed(1);
+  const urgent = isTime && G.state === 'playing' && left <= 3;
+
+  for (const n of [1, 2]) {
+    const P = G.pl[n];
+    setText(UI.taps[n], 'taps' + n, String(P.taps));
+    setText(UI.terr[n], 'terr' + n, (n === 1 ? t1 : t2) + '%');
+    setText(UI.time[n], 'time' + n, timeStr);
+    setText(UI.timeLbl[n], 'tl' + n, isTime ? 'осталось' : 'прошло');
+    setFlag(UI.timerBox[n], 'urg' + n, 'urgent', urgent);
+
+    const show = G.state === 'playing' && P.combo >= 3;
+    setFlag(UI.combo[n], 'con' + n, 'on', show);
+    if (show) {
+      const tier = comboTier(P.combo);
+      setText(UI.comboMult[n], 'cm' + n, 'x' + comboMult(P.combo));
+      setText(UI.comboCnt[n], 'cc' + n, P.combo + ' КОМБО');
+      if (tier !== P.tier) {
+        for (let k = 1; k <= 4; k++) UI.combo[n].classList.toggle('t' + k, k === tier);
+        if (tier > P.tier) {           // анимация только при росте уровня, а не на каждый тап
+          UI.combo[n].classList.remove('bump');
+          void UI.combo[n].offsetWidth;
+          UI.combo[n].classList.add('bump');
+        }
+        P.tier = tier;
+      }
+    } else if (P.tier) {
+      P.tier = 0;
+      for (let k = 1; k <= 4; k++) UI.combo[n].classList.remove('t' + k);
+    }
+  }
+}
+
+/* =====================================================================
+   ЭКРАН РЕЗУЛЬТАТОВ
+   ===================================================================== */
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
+function showResults() {
+  const t = Math.max(G.elapsed, 0.001);
+  const ter2 = Math.round(G.p * 100), ter1 = 100 - ter2;
+  const s = [null,
+    { taps: G.pl[1].taps, cps: G.pl[1].taps / t, peak: G.pl[1].peak, ter: ter1 },
+    { taps: G.pl[2].taps, cps: G.pl[2].taps / t, peak: G.pl[2].peak, ter: ter2 }];
+  const terDiff = Math.abs(ter1 - ter2), tapDiff = Math.abs(s[1].taps - s[2].taps);
+  const reasonTxt = {
+    ko: 'Нокаут — граница дотолкана до края!',
+    time: 'Время вышло — решает территория',
+    cap: 'Лимит 90 с — решает территория',
+  }[G.reason] || '';
+  const marginTxt = G.winner === 0
+    ? 'Абсолютная ничья: территория и тапы равны'
+    : `Отрыв: ${terDiff}% территории · ${tapDiff} ${plural(tapDiff, 'тап', 'тапа', 'тапов')} · ${t.toFixed(1)} с`;
+
+  for (const n of [1, 2]) {
+    const me = s[n], op = s[3 - n];
+    const verdict = G.winner === 0 ? 'НИЧЬЯ' : (G.winner === n ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ');
+    const cls = G.winner === 0 ? 'draw' : (G.winner === n ? 'win' : 'lose');
+    const row = (label, a, b, fa, fb) =>
+      `<tr><td>${label}</td><td class="me${a > b ? ' best' : ''}">${fa}</td><td${b > a ? ' class="best"' : ''}>${fb}</td></tr>`;
+    const el = UI['res' + n];
+    el.className = 'res-half res-p' + n + ' ' + cls;
+    el.innerHTML =
+      `<div class="banner"><div class="verdict">${verdict}</div><div class="reason">${reasonTxt}</div></div>
+       <table class="stats">
+         <thead><tr><th>Игрок ${n}</th><th>Ты</th><th>Соперник</th></tr></thead>
+         <tbody>
+           ${row('Всего тапов', me.taps, op.taps, me.taps, op.taps)}
+           ${row('Тапов/сек', me.cps, op.cps, me.cps.toFixed(1), op.cps.toFixed(1))}
+           ${row('Пик комбо', me.peak, op.peak, me.peak, op.peak)}
+           ${row('Территория', me.ter, op.ter, me.ter + '%', op.ter + '%')}
+         </tbody>
+       </table>`;
+  }
+  UI.resMargin.textContent = marginTxt;
+
+  UI.cd.classList.add('hidden');
+  game.classList.add('ended');
+  UI.results.classList.add('locked');
+  UI.results.classList.remove('hidden');
+  spawnConfetti(G.winner);
+  later(() => UI.results.classList.remove('locked'), CFG.RESULT_LOCK);
+}
+
+/* =====================================================================
+   МЕНЮ
+   ===================================================================== */
+function applyMode(m) {
+  settings.mode = m;
+  for (const b of UI.modeSeg.querySelectorAll('[data-mode]')) b.classList.toggle('active', b.dataset.mode === m);
+  UI.modeHint.textContent = MODES[m].hint;
+}
+function applyTheme(t) {
+  settings.theme = t;
+  THEME = THEMES[t];
+  document.body.className = 'theme-' + t;
+  for (const b of UI.themeSeg.querySelectorAll('[data-theme]')) b.classList.toggle('active', b.dataset.theme === t);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#000');
+  buildOverlay();
+}
+
+UI.modeSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-mode]'); if (!b) return;
+  applyMode(b.dataset.mode); saveSettings();
+});
+UI.themeSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-theme]'); if (!b) return;
+  applyTheme(b.dataset.theme); saveSettings();
+});
+$('btnStart').addEventListener('click', startMatch);
+$('btnRules').addEventListener('click', () => UI.rules.classList.remove('hidden'));
+$('btnRulesClose').addEventListener('click', () => UI.rules.classList.add('hidden'));
+UI.rules.addEventListener('click', (e) => { if (e.target === UI.rules) UI.rules.classList.add('hidden'); });
+$('btnRematch').addEventListener('click', () => { if (G.state === 'over') startMatch(); });
+$('btnMenu').addEventListener('click', () => { if (G.state === 'over') goMenu(); });
+
+/* =====================================================================
+   СТАРТ
+   ===================================================================== */
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+
+applyMode(settings.mode);
+applyTheme(settings.theme);
+resize();
+updateHud();
+
+/* Хук для автотестов (не мешает игре) */
+window.__TC = { G, startMatch, goMenu, tap };
+})();
+</script>
+</body>
+</html>
