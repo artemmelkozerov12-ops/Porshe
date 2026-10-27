@@ -1,0 +1,8 @@
+render/*.bin
+render/tracer
+render/prev*.png
+render/d*.png
+render/cmp.png
+render/dbg.png
+render/final.log
+__pycache__/

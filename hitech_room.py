@@ -97,7 +97,7 @@ M = {
     "pillow_w": material("PillowWhite", (0.7, 0.7, 0.68), rough=0.9, sheen=0.6),
     "pillow_g": material("PillowSage", (0.24, 0.32, 0.25), rough=0.9, sheen=0.6),
     "leather": material("BlackLeather", (0.02, 0.02, 0.02), rough=0.35, coat=0.3),
-    "rug": material("Rug", (0.5, 0.5, 0.48), rough=1.0, sheen=0.8),
+    "rug": material("Rug", (0.2, 0.2, 0.195), rough=1.0, sheen=0.8),
     "pot": material("PotMatteWhite", (0.78, 0.78, 0.76), rough=0.55),
     "soil": material("Soil", (0.03, 0.02, 0.015), rough=1.0),
     "stem": material("Stem", (0.08, 0.16, 0.05), rough=0.6),
@@ -105,9 +105,9 @@ M = {
     "cat": material("CatFur", (0.12, 0.12, 0.13), rough=0.85, sheen=1.0),
     "art": material("ArtCanvas", (0.36, 0.45, 0.37), rough=0.9),
     "ground": material("Ground", (0.18, 0.22, 0.15), rough=0.9),
-    "led_warm": material("LED_Warm", (1, 1, 1), emission=(1.0, 0.86, 0.7), strength=30),
-    "led_neutral": material("LED_Neutral", (1, 1, 1), emission=(1.0, 0.94, 0.86), strength=40),
-    "led_cool": material("LED_Cool", (1, 1, 1), emission=(0.65, 0.8, 1.0), strength=12),
+    "led_warm": material("LED_Warm", (1, 1, 1), emission=(1.0, 0.86, 0.7), strength=10),
+    "led_neutral": material("LED_Neutral", (1, 1, 1), emission=(1.0, 0.94, 0.86), strength=13),
+    "led_cool": material("LED_Cool", (1, 1, 1), emission=(0.65, 0.8, 1.0), strength=7),
 }
 add_noise_bump(M["concrete"], 6.0, 0.03, (0.36, 0.36, 0.35), (0.5, 0.5, 0.49))
 add_noise_bump(M["graphite"], 25.0, 0.05, (0.045, 0.047, 0.05), (0.075, 0.077, 0.08))
@@ -218,7 +218,7 @@ bpy.context.active_object.data.materials.append(M["ground"])
 
 # ---------------------------------------------------------------- ТВ-зона (левая стена)
 box("AccentPanel", -W, -W + 0.02, 1.5, 4.1, 0, H, M["graphite"])
-box("TV_Backlight", -W + 0.02, -W + 0.025, 1.98, 3.62, 0.9, 1.82, M["led_cool"])
+box("TV_Backlight", -W + 0.02, -W + 0.025, 2.2, 3.4, 1.05, 1.66, M["led_cool"])  # меньше корпуса ТВ: светит только отражённым
 box("TV_Body", -W + 0.03, -W + 0.06, 2.08, 3.52, 0.95, 1.76, M["alu_black"], bevel=0.005)
 box("TV_Screen", -W + 0.06, -W + 0.064, 2.1, 3.5, 0.97, 1.74, M["screen"])
 
@@ -323,7 +323,7 @@ for k in range(3):
     rod(f"RingWire{k}", p, (p.x, p.y, H), 0.0012, M["chrome"], verts=6)
 
 # солнце через окна
-sun_dir = Vector((-0.35, -0.85, -0.42)).normalized()
+sun_dir = Vector((-0.3, -0.75, -0.65)).normalized()
 bpy.ops.object.light_add(type="SUN", location=(0, D + 3, 4))
 sun = bpy.context.active_object
 sun.data.energy = 4.5
